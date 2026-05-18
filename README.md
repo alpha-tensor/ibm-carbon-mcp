@@ -16,20 +16,20 @@ This server allows AI assistants (like Claude Desktop, Cursor, and Zed) to nativ
 You can use this server in any MCP-compatible client without explicitly cloning the repository by using `npx`.
 
 ### Zed
+
 Add the following to your Zed configuration (`~/.config/zed/settings.json`):
 
 ```json
 {
-  "experimental.mcp": {
-    "ibm-carbon-mcp": {
-      "command": "npx",
-      "args": ["-y", "github:alpha-tensor/ibm-carbon-mcp"]
-    }
+  "ibm-carbon-mcp": {
+    "command": "npx",
+    "args": ["-y", "github:alpha-tensor/ibm-carbon-mcp"]
   }
 }
 ```
 
 ### Claude Desktop
+
 Add the following to your `claude_desktop_config.json`:
 
 ```json
@@ -44,7 +44,9 @@ Add the following to your `claude_desktop_config.json`:
 ```
 
 ### Cursor
+
 In Cursor Settings > Features > MCP:
+
 1. Add a new server.
 2. Name: `ibm-carbon-mcp`
 3. Type: `command`
@@ -57,6 +59,7 @@ In Cursor Settings > Features > MCP:
 While standard API fetching works, you can drastically speed up searches and improve accuracy by building a local markdown mirror and search index.
 
 1. Clone the repository:
+
    ```bash
    git clone git@github.com:alpha-tensor/ibm-carbon-mcp.git
    cd ibm-carbon-mcp
@@ -64,10 +67,12 @@ While standard API fetching works, you can drastically speed up searches and imp
    ```
 
 2. Build the local mirror and index:
+
    ```bash
    npm run sync:carbon-docs
    ```
-   *(This downloads the latest markdown from Carbon, IBM Products, and Carbon Charts repos into a local `.cache/github-mirror` directory and builds an inverted search index).*
+
+   _(This downloads the latest markdown from Carbon, IBM Products, and Carbon Charts repos into a local `.cache/github-mirror` directory and builds an inverted search index)._
 
 3. Build and test the server:
    ```bash
