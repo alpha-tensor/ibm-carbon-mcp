@@ -14,7 +14,8 @@
     "test": "vitest",
     "test:north-star": "vitest run src/services/documentation.test.ts",
     "sync:carbon-docs": "tsx scripts/sync-carbon-docs.ts",
-    "build:index": "tsx src/services/search-index.ts"
+    "build:index": "tsx src/services/search-index.ts",
+    "prepare": "npm run build"
   },
   "keywords": [
     "mcp",
