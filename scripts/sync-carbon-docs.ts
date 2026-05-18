@@ -30,22 +30,47 @@ const targets: SyncTarget[] = [
     owner: "carbon-design-system",
     repo: "carbon-charts",
     branch: "main",
-    includePaths: ["packages/docs", "packages/react", "packages/angular", "packages/vue", "packages/svelte"],
+    includePaths: [
+      "packages/docs",
+      "packages/react",
+      "packages/angular",
+      "packages/vue",
+      "packages/svelte",
+    ],
+    extensions: [".md", ".mdx"],
+  },
+  {
+    owner: "carbon-design-system",
+    repo: "carbon-labs",
+    branch: "main",
+    includePaths: ["examples"],
     extensions: [".md", ".mdx"],
   },
 ];
 
-function isWithinIncludePaths(filePath: string, includePaths: string[]): boolean {
-  return includePaths.some((includePath) => filePath === includePath || filePath.startsWith(`${includePath}/`));
+function isWithinIncludePaths(
+  filePath: string,
+  includePaths: string[],
+): boolean {
+  return includePaths.some(
+    (includePath) =>
+      filePath === includePath || filePath.startsWith(`${includePath}/`),
+  );
 }
 
 function matchesExtension(filePath: string, extensions: string[]): boolean {
-  return extensions.some((extension) => filePath.toLowerCase().endsWith(extension.toLowerCase()));
+  return extensions.some((extension) =>
+    filePath.toLowerCase().endsWith(extension.toLowerCase()),
+  );
 }
 
 async function syncTarget(target: SyncTarget): Promise<void> {
   console.log(`\nSyncing ${target.owner}/${target.repo}@${target.branch} ...`);
-  const tree = await getGitHubRepoTree(target.owner, target.repo, target.branch);
+  const tree = await getGitHubRepoTree(
+    target.owner,
+    target.repo,
+    target.branch,
+  );
   const files = tree
     .filter((item) => item.type === "blob")
     .map((item) => item.path)
@@ -59,11 +84,20 @@ async function syncTarget(target: SyncTarget): Promise<void> {
     const batch = files.slice(index, index + batchSize);
     await Promise.all(
       batch.map(async (filePath) => {
-        const content = await getRawGitHubFile(target.owner, target.repo, target.branch, filePath);
-        const destinationPath = getMirroredRepoPath(target.owner, target.repo, filePath);
+        const content = await getRawGitHubFile(
+          target.owner,
+          target.repo,
+          target.branch,
+          filePath,
+        );
+        const destinationPath = getMirroredRepoPath(
+          target.owner,
+          target.repo,
+          filePath,
+        );
         await ensureDirectory(path.dirname(destinationPath));
         await writeFile(destinationPath, content, "utf8");
-      })
+      }),
     );
 
     const completed = Math.min(index + batch.length, files.length);
@@ -76,7 +110,13 @@ async function main(): Promise<void> {
     await syncTarget(target);
   }
 
-  console.log("\nDone. Local markdown mirror is ready under .cache/github-mirror.");
+  console.log(
+    "\nDone. Local markdown mirror is ready under .cache/github-mirror.",
+  );
+
+  console.log("\nRebuilding search index...");
+  const { loadOrBuildIndex } = await import("../src/services/search-index.js");
+  await loadOrBuildIndex();
 }
 
 main().catch((error) => {

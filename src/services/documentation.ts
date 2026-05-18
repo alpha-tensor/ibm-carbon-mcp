@@ -11,6 +11,7 @@ import {
   toPosixPath,
   walkFiles,
 } from "../utils/files.js";
+import { loadOrBuildIndex, type SearchIndex } from "./search-index.js";
 
 interface RepositoryTarget {
   owner: string;
@@ -60,6 +61,13 @@ const DOCS_TARGETS: RepositoryTarget[] = [
     repo: "ibm-products",
     branch: DEFAULT_BRANCH,
     includePaths: ["packages/ibm-products/src/components"],
+    extensions: [".md", ".mdx"],
+  },
+  {
+    owner: "carbon-design-system",
+    repo: "carbon-labs",
+    branch: DEFAULT_BRANCH,
+    includePaths: ["examples"],
     extensions: [".md", ".mdx"],
   },
 ];
@@ -345,6 +353,8 @@ function deduplicateCandidates(candidates: CandidateFile[]): CandidateFile[] {
 export class DocumentationService {
   private readonly repoTreeCache = new Map<string, GitHubTreeItem[]>();
   private readonly fileContentCache = new Map<string, string>();
+  private searchIndex: SearchIndex | null = null;
+  private searchIndexPromise: Promise<SearchIndex | null> | null = null;
 
   async searchDocs(query: string): Promise<SearchResult[]> {
     console.error(`[Docs Search] Query: ${query}`);
@@ -504,6 +514,30 @@ export class DocumentationService {
     return "component";
   }
 
+  private async getSearchIndex(): Promise<SearchIndex | null> {
+    if (this.searchIndex) {
+      return this.searchIndex;
+    }
+
+    if (this.searchIndexPromise) {
+      return this.searchIndexPromise;
+    }
+
+    this.searchIndexPromise = (async () => {
+      try {
+        this.searchIndex = await loadOrBuildIndex();
+      } catch {
+        console.error(
+          "[Docs] Failed to load search index, falling back to brute force",
+        );
+      }
+
+      return this.searchIndex;
+    })();
+
+    return this.searchIndexPromise;
+  }
+
   private async getRepositoryTree(
     target: RepositoryTarget,
   ): Promise<GitHubTreeItem[]> {
@@ -560,6 +594,47 @@ export class DocumentationService {
   }
 
   private async findLocalDocCandidates(
+    query: QueryParts,
+  ): Promise<CandidateFile[]> {
+    const index = await this.getSearchIndex();
+
+    if (index) {
+      return this.findLocalCandidatesViaIndex(query, index);
+    }
+
+    return this.findLocalCandidatesViaWalk(query);
+  }
+
+  private async findLocalCandidatesViaIndex(
+    query: QueryParts,
+    index: SearchIndex,
+  ): Promise<CandidateFile[]> {
+    const rawResults = index.search(query.original, MAX_RESULTS * 4);
+
+    return rawResults.map((scored) => {
+      const localPath = getMirroredRepoPath(
+        scored.doc.owner,
+        scored.doc.repo,
+        scored.doc.relPath,
+      );
+
+      const pathScore = scorePath(scored.doc.relPath, query);
+      const contentScore = scored.score * 100;
+
+      return {
+        owner: scored.doc.owner,
+        repo: scored.doc.repo,
+        branch: "main",
+        path: scored.doc.relPath,
+        url: scored.doc.url,
+        localPath,
+        pathScore,
+        contentScore,
+      };
+    });
+  }
+
+  private async findLocalCandidatesViaWalk(
     query: QueryParts,
   ): Promise<CandidateFile[]> {
     const candidates: CandidateFile[] = [];
