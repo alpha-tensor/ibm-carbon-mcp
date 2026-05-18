@@ -12,6 +12,7 @@
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "vitest",
+    "test:north-star": "vitest run src/services/documentation.test.ts",
     "sync:carbon-docs": "tsx scripts/sync-carbon-docs.ts"
   },
   "keywords": [
